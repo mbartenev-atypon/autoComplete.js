@@ -104,7 +104,9 @@ export default class autoComplete {
     this.onSelection = onSelection;
     // Invoking preInit automatically
     // when autoComplete instance gets initiated
+    this.closeAllList = () => closeAllLists(this) // exposing api
     this.preInit();
+    document.addEventListener("click", (event) => closeAllLists(this, event.target));
   }
 
   // Run autoComplete processes
@@ -116,18 +118,20 @@ export default class autoComplete {
     /**
      * @emits {response} Emits Event on search response
      **/
-    eventEmitter(this.inputField, dataFeedback, "results");
+    eventEmitter(this.inputField, dataFeedback, "autoComplete.results");
     // - Checks if there are NO results
     // Runs noResults action function
     if (!results.length) return this.noResults ? this.noResults(dataFeedback, generateList) : null;
     // - If resultsList set not to render
     if (!this.resultsList.render) return this.feedback(dataFeedback);
     // - Generate & Render results list
-    const list = results.length ? generateList(this, dataFeedback, results) : null;
+    if (results.length) {
+      generateList(this, dataFeedback, results)
+    }
     /**
      * @emits {rendered} Emits Event after results list rendering
      **/
-    eventEmitter(this.inputField, dataFeedback, "rendered");
+    eventEmitter(this.inputField, dataFeedback, "autoComplete.rendered");
     // - Initialize navigation
     navigate(this, dataFeedback);
     /**
@@ -136,7 +140,6 @@ export default class autoComplete {
      * and closes this menu if clicked outside the list and input field
      * @listens {click} Listens to all `click` events on the document
      **/
-    document.addEventListener("click", (event) => closeAllLists(this, event.target));
   }
 
   async dataStore() {
@@ -148,7 +151,7 @@ export default class autoComplete {
     /**
      * @emits {request} Emits Event on data response
      **/
-    eventEmitter(this.inputField, this.data.store, "fetch");
+    eventEmitter(this.inputField, this.data.store, "autoComplete.fetch");
   }
 
   // Run autoComplete composer
@@ -174,13 +177,13 @@ export default class autoComplete {
   }
 
   // Initialization stage
-  init() {
+  init(inputField) {
+    this.inputField = inputField
     // Assign the input field selector
-    this.inputField = document.querySelector(this.selector);
     // Set input field attributes
     inputComponent(this);
     // Set placeholder attribute value
-    if (this.placeHolder) this.inputField.setAttribute("placeholder", this.placeHolder);
+    if (this.placeHolder) inputField.setAttribute("placeholder", this.placeHolder);
     // Run executer
     this.hook = debouncer(() => {
       // - Prepare autoComplete processes
@@ -190,43 +193,21 @@ export default class autoComplete {
      * @listens {input} Listens to all `input` events on the input field
      **/
     this.trigger.event.forEach((eventType) => {
-      this.inputField.addEventListener(eventType, this.hook);
+      inputField.addEventListener(eventType, this.hook);
     });
     /**
      * @emits {init} Emits Event on Initialization
      **/
-    eventEmitter(this.inputField, null, "init");
+    eventEmitter(inputField, null, "init");
   }
 
   // Pre-Initialization stage
   preInit() {
-    // Observe DOM changes
-    // The entire document will be observed for mutations
     const targetNode = document;
+    const inputField = typeof this.selector === 'function' ? this.selector() : targetNode.querySelector(this.selector);
     // Options for the observer (which mutations to observe)
-    const config = { childList: true, subtree: true };
-    // Callback function to execute when mutations are observed
-    const callback = (mutationsList, observer) => {
-      const inputField = targetNode.querySelector(this.selector);
-      // Traditional 'for loops' for IE 11
-      for (let mutation of mutationsList) {
-        // Check if this is the selected input field
-        if (inputField) {
-          // If yes disconnect the observer
-          observer.disconnect();
-          /**
-           * @emits {connect} Emits Event on connection
-           **/
-          eventEmitter(inputField, null, "connect");
-          // Initialize autoComplete
-          this.init();
-        }
-      }
-    };
-    // Create an observer instance linked to the callback function
-    const observer = new MutationObserver(callback);
-    // Start observing the target node for configured mutations
-    observer.observe(targetNode, config);
+    eventEmitter(inputField, null, "connect");
+    this.init(inputField);
   }
 
   // Un-initialize autoComplete
@@ -235,6 +216,6 @@ export default class autoComplete {
     /**
      * @emits {detached} Emits Event on input eventListener detachment
      **/
-    eventEmitter(this.inputField, null, "unInit");
+    eventEmitter(this.inputField, null, "autoComplete.unInit");
   }
 }

@@ -1,5 +1,5 @@
 
-(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
+(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35730/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -318,7 +318,7 @@
     var _loop = function _loop(index) {
       var record = config.data.store[index];
       var search = function search(key) {
-        var recordValue = (key ? record[key] : record).toString();
+        var recordValue = key ? record[key] : record;
         if (recordValue) {
           var match = typeof config.searchEngine === "function" ? config.searchEngine(query, recordValue) : searchEngine(query, recordValue, config);
           if (match && key) {
@@ -375,6 +375,7 @@
 
   var autoComplete = function () {
     function autoComplete(config) {
+      var _this = this;
       _classCallCheck(this, autoComplete);
       var _config$name = config.name,
           name = _config$name === void 0 ? "Search" : _config$name,
@@ -478,12 +479,17 @@
       this.highlight = highlight;
       this.feedback = feedback;
       this.onSelection = onSelection;
+      this.closeAllList = function () {
+        return closeAllLists(_this);
+      };
       this.preInit();
+      document.addEventListener("click", function (event) {
+        return closeAllLists(_this, event.target);
+      });
     }
     _createClass(autoComplete, [{
       key: "start",
       value: function start(input, query) {
-        var _this = this;
         var results = listMatchingResults(this, query);
         var dataFeedback = {
           input: input,
@@ -491,15 +497,14 @@
           matches: results,
           results: results.slice(0, this.maxResults)
         };
-        eventEmitter(this.inputField, dataFeedback, "results");
+        eventEmitter(this.inputField, dataFeedback, "autoComplete.results");
         if (!results.length) return this.noResults ? this.noResults(dataFeedback, generateList) : null;
         if (!this.resultsList.render) return this.feedback(dataFeedback);
-        var list = results.length ? generateList(this, dataFeedback, results) : null;
-        eventEmitter(this.inputField, dataFeedback, "rendered");
+        if (results.length) {
+          generateList(this, dataFeedback, results);
+        }
+        eventEmitter(this.inputField, dataFeedback, "autoComplete.rendered");
         navigate(this, dataFeedback);
-        document.addEventListener("click", function (event) {
-          return closeAllLists(_this, event.target);
-        });
       }
     }, {
       key: "dataStore",
@@ -515,7 +520,7 @@
           }).then(function ($await_5) {
             try {
               _this2.data.store = $await_5;
-              eventEmitter(_this2.inputField, _this2.data.store, "fetch");
+              eventEmitter(_this2.inputField, _this2.data.store, "autoComplete.fetch");
               return $return();
             } catch ($boundEx) {
               return $error($boundEx);
@@ -553,55 +558,32 @@
       }
     }, {
       key: "init",
-      value: function init() {
+      value: function init(inputField) {
         var _this4 = this;
-        this.inputField = document.querySelector(this.selector);
+        this.inputField = inputField;
         inputComponent(this);
-        if (this.placeHolder) this.inputField.setAttribute("placeholder", this.placeHolder);
+        if (this.placeHolder) inputField.setAttribute("placeholder", this.placeHolder);
         this.hook = debouncer(function () {
           _this4.compose();
         }, this.debounce);
         this.trigger.event.forEach(function (eventType) {
-          _this4.inputField.addEventListener(eventType, _this4.hook);
+          inputField.addEventListener(eventType, _this4.hook);
         });
-        eventEmitter(this.inputField, null, "init");
+        eventEmitter(inputField, null, "init");
       }
     }, {
       key: "preInit",
       value: function preInit() {
-        var _this5 = this;
         var targetNode = document;
-        var config = {
-          childList: true,
-          subtree: true
-        };
-        var callback = function callback(mutationsList, observer) {
-          var inputField = targetNode.querySelector(_this5.selector);
-          var _iterator = _createForOfIteratorHelper(mutationsList),
-              _step;
-          try {
-            for (_iterator.s(); !(_step = _iterator.n()).done;) {
-              var mutation = _step.value;
-              if (inputField) {
-                observer.disconnect();
-                eventEmitter(inputField, null, "connect");
-                _this5.init();
-              }
-            }
-          } catch (err) {
-            _iterator.e(err);
-          } finally {
-            _iterator.f();
-          }
-        };
-        var observer = new MutationObserver(callback);
-        observer.observe(targetNode, config);
+        var inputField = typeof this.selector === 'function' ? this.selector() : targetNode.querySelector(this.selector);
+        eventEmitter(inputField, null, "connect");
+        this.init(inputField);
       }
     }, {
       key: "unInit",
       value: function unInit() {
         this.inputField.removeEventListener("input", this.hook);
-        eventEmitter(this.inputField, null, "unInit");
+        eventEmitter(this.inputField, null, "autoComplete.unInit");
       }
     }]);
     return autoComplete;

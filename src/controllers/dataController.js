@@ -54,11 +54,11 @@ const listMatchingResults = (config, query) => {
   const resList = [];
   // Checks input has matches in data source
   for (let index = 0; index < config.data.store.length; index++) {
-    const record = config.data.store[index];
+    const record = config.data.store[index]; // @TODO remove data store support
     // Search/Matching function
     const search = (key) => {
       // This Record value
-      const recordValue = (key ? record[key] : record).toString();
+      const recordValue = key ? record[key] : record;
       // Check if record does exist before search
       if (recordValue) {
         // Holds match value
